@@ -1,12 +1,16 @@
 # cgc
 A mark and sweep garbage collector written in c
 
+This garbage collector only works on UNIX based operating systems and does not work on windows due to the absence of the `<mmap.h>` header.
+
 ## Compile and run tests
 ```
 make test
 ```
 
 ## Usage
+Compile your program with the src and include files of cgc. Then use cgc as follows:
+
 ```
 #include "gc.h"
 

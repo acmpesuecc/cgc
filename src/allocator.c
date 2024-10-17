@@ -187,4 +187,3 @@ void print_usedlist(block_t *list) {
   }
   printf("\n");
 }
-

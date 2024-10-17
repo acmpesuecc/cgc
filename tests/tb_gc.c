@@ -63,9 +63,10 @@ void test_gc (alloc_t *allocator) {
 
   teststruct->pointer = teststruct;
 
-  gc_collect(allocator);
-  printf("***After garbage collecting: Allocated size: %ld\n", allocator->allocated_size);
+	printf("Final free list: Allocated size: %ld\n", allocator->allocated_size);
   print_freelist(allocator->free_list);
+
+  printf("Final used list: Allocated size: %ld\n", allocator->allocated_size);
   print_usedlist(allocator->used_list);
 }
 
@@ -75,4 +76,3 @@ int main (int argc, char **argv) {
 	test_gc(allocator);
 	return 0;
 }
-

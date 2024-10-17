@@ -34,4 +34,3 @@ static uintptr_t *getbos();
 alloc_t *alloc_init();
 void *mem_alloc(alloc_t *allocator, size_t num_units);
 void gc_collect(alloc_t *allocator);
-
