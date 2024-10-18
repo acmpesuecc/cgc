@@ -1,4 +1,9 @@
 #include "gc.h"
+#include <unistd.h>
+
+size_t get_page_size() {
+    return (size_t)getpagesize();
+}
 
 static void scan_mem(alloc_t *allocator, uintptr_t *start, uintptr_t *end) {
   block_t *current_block = allocator->used_list->next;
