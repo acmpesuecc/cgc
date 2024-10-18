@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/mman.h>
+#include <unistd.h>
 
 typedef struct block {
   size_t size;
@@ -20,9 +21,11 @@ typedef struct alloc {
   size_t allocated_size;
 } alloc_t;
 
-#define PAGE_SIZE 4096
+size_t get_page_size();
+
+
 #define HEADER_SIZE sizeof(block_t)
-#define ALLOC_LIMIT 2 * PAGE_SIZE
+#define ALLOC_LIMIT (2 * get_page_size())
 #define ALLOC_FAILURE 1
 #define ALLOC_SUCCESS 0
 
