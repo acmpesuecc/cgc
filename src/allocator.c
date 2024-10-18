@@ -6,21 +6,22 @@
 #define PAGE_SIZE 4096
 #define ALLOC_SUCCESS 0
 #define ALLOC_FAILURE 1
+#ifndef ALLOC_LIMIT  // Prevent redefinition
 #define ALLOC_LIMIT (100 * PAGE_SIZE)  
 
-typedef struct block {
+typedef struct mem_block {  // Renamed to avoid conflicts
     size_t size;
-    struct block *next;
-    struct block *prev;
+    struct mem_block *next;
+    struct mem_block *prev;
     int marked;
-} block_t;
+} mem_block_t;
 
-typedef struct alloc {
-    block_t *free_list;
-    block_t *used_list;
+typedef struct allocator {  // Renamed to avoid conflicts
+    mem_block_t *free_list;
+    mem_block_t *used_list;
     void *bos;  // Bottom of the stack
     size_t allocated_size;
-} alloc_t;
+} allocator_t;
 
 // Fetch memory pages using mmap
 static void *mempage_fetch(unsigned int num_pages) {
@@ -32,8 +33,8 @@ static void *mempage_fetch(unsigned int num_pages) {
     return block;
 }
 
-u_int16_t add_to_free_list(alloc_t *allocator, block_t *block) {
-    block_t *free_list = allocator->free_list;
+u_int16_t add_to_free_list(allocator_t *allocator, mem_block_t *block) {
+    mem_block_t *free_list = allocator->free_list;
 
     while (!(block > free_list && block < free_list->next)) {
         if (free_list >= free_list->next && (block > free_list || block < free_list->next)) {
@@ -68,22 +69,22 @@ u_int16_t add_to_free_list(alloc_t *allocator, block_t *block) {
 }
 
 // Initialize allocator and memory lists
-alloc_t *alloc_init() {
+allocator_t *alloc_init() {
     // Calculate total pages needed for allocator and structure
-    size_t total_pages = (sizeof(alloc_t) + 2 * sizeof(block_t) + PAGE_SIZE - 1) / PAGE_SIZE;
+    size_t total_pages = (sizeof(allocator_t) + 2 * sizeof(mem_block_t) + PAGE_SIZE - 1) / PAGE_SIZE;
     void *mem_block = mempage_fetch(total_pages);
     if (mem_block == NULL) {
         return NULL;
     }
 
     // Initialize allocator structure
-    alloc_t *allocator = (alloc_t *)mem_block;
+    allocator_t *allocator = (allocator_t *)mem_block;
     allocator->allocated_size = 0;
     allocator->bos = __builtin_frame_address(0);  // Set bottom of stack
 
     // Allocate space for free_list and used_list within the same memory block
-    block_t *free_list = (block_t *)((char *)mem_block + sizeof(alloc_t));
-    block_t *used_list = (block_t *)((char *)free_list + sizeof(block_t));
+    mem_block_t *free_list = (mem_block_t *)((char *)mem_block + sizeof(allocator_t));
+    mem_block_t *used_list = (mem_block_t *)((char *)free_list + sizeof(mem_block_t));
 
     // Initialize free_list
     free_list->marked = 1;
@@ -102,10 +103,10 @@ alloc_t *alloc_init() {
     allocator->used_list = used_list;
 
     // Add remaining memory to the free list (if any)
-    size_t used_memory = sizeof(alloc_t) + 2 * sizeof(block_t);
+    size_t used_memory = sizeof(allocator_t) + 2 * sizeof(mem_block_t);
     size_t remaining_memory = total_pages * PAGE_SIZE - used_memory;
-    if (remaining_memory >= sizeof(block_t)) {
-        block_t *remaining_block = (block_t *)((char *)used_list + sizeof(block_t));
+    if (remaining_memory >= sizeof(mem_block_t)) {
+        mem_block_t *remaining_block = (mem_block_t *)((char *)used_list + sizeof(mem_block_t));
         remaining_block->size = remaining_memory;
         add_to_free_list(allocator, remaining_block);
     }
@@ -114,15 +115,15 @@ alloc_t *alloc_init() {
 }
 
 // Memory allocation
-void *mem_alloc(alloc_t *allocator, size_t num_units) {
+void *mem_alloc(allocator_t *allocator, size_t num_units) {
     if (allocator->allocated_size > ALLOC_LIMIT) {
         gc_collect(allocator);  // Garbage collect when allocation exceeds limit
     }
 
-    size_t total_size = (num_units + sizeof(block_t) - 1) / sizeof(block_t) + 1;
-    total_size *= sizeof(block_t);
+    size_t total_size = (num_units + sizeof(mem_block_t) - 1) / sizeof(mem_block_t) + 1;
+    total_size *= sizeof(mem_block_t);
 
-    block_t *free_list = allocator->free_list;
+    mem_block_t *free_list = allocator->free_list;
 
     do {
         if (free_list->size >= total_size) {
@@ -142,8 +143,8 @@ void *mem_alloc(alloc_t *allocator, size_t num_units) {
                 allocator->allocated_size += free_list->size;
                 return (void *)(free_list + 1);
             }
-            if (free_list->size - total_size >= sizeof(block_t)) {
-                block_t *new_block = (block_t *)((char *)free_list + total_size);
+            if (free_list->size - total_size >= sizeof(mem_block_t)) {
+                mem_block_t *new_block = (mem_block_t *)((char *)free_list + total_size);
                 new_block->size = free_list->size - total_size;
                 new_block->next = free_list->next;
                 new_block->prev = free_list->prev;
@@ -168,7 +169,7 @@ void *mem_alloc(alloc_t *allocator, size_t num_units) {
     } while (free_list != allocator->free_list);
 
     size_t total_pages = (total_size + PAGE_SIZE - 1) / PAGE_SIZE;
-    block_t *new_block = mempage_fetch(total_pages);
+    mem_block_t *new_block = mempage_fetch(total_pages);
     if (new_block == NULL) {
         return NULL;
     }
@@ -182,8 +183,8 @@ void *mem_alloc(alloc_t *allocator, size_t num_units) {
 }
 
 // Memory deallocation
-u_int16_t mem_dealloc(alloc_t *allocator, void *mem) {
-    block_t *block = (block_t *)mem - 1;
+u_int16_t mem_dealloc(allocator_t *allocator, void *mem) {
+    mem_block_t *block = (mem_block_t *)mem - 1;
 
     if (block->prev != NULL) {
         block->prev->next = block->next;
@@ -199,9 +200,9 @@ u_int16_t mem_dealloc(alloc_t *allocator, void *mem) {
     return ALLOC_SUCCESS;
 }
 
-void print_freelist(block_t *list) {
+void print_freelist(mem_block_t *list) {
     printf("Free List: \n");
-    block_t *current = list->next;
+    mem_block_t *current = list->next;
     do {
         printf("Block at %p: size=%zu, marked=%d\n", (void *)current, current->size, current->marked);
         current = current->next;
@@ -209,7 +210,7 @@ void print_freelist(block_t *list) {
     printf("\n");
 }
 
-void print_usedlist(block_t *list) {
+void print_usedlist(mem_block_t *list) {
     printf("Used List: \n");
     while (list != NULL) {
         printf("Block at %p: size=%zu, marked=%d\n", (void *)list, list->size, list->marked);
@@ -217,4 +218,3 @@ void print_usedlist(block_t *list) {
     }
     printf("\n");
 }
-
