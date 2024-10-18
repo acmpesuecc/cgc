@@ -214,9 +214,26 @@ void *mem_calloc(alloc_t *allocator, size_t num_units) {
   new_block->size = total_pages * PAGE_SIZE;
 
   add_to_free_list(allocator, new_block);
-  memset((void *)(new_block + 1), 0, new_block->size - sizeof(block_t)); // Ensure zeroing for the new block
+  memset((void *)(new_block + 1), 0, new_block->size - sizeof(block_t)); 
 
   return mem_alloc(allocator, num_units);
+}
+
+
+void *mem_realloc(alloc_t *allocator, size_t new_num_units) {
+	if (allocator->allocated_size <= ALLOC_LIMIT) {
+		alloc_t *new_allocator = mem_alloc(allocator, new_num_units);
+		if (new_allocator == NULL) {
+			return NULL;
+		}
+		size_t total_size = (new_num_units + sizeof(block_t) - 1) / sizeof(block_t) + 1;
+  		total_size *= sizeof(block_t);  
+		
+		memcpy(new_allocator, allocator, total_size);
+		return allocator;
+	}else {
+		gc_collect(allocator);
+	}
 }
 
 
