@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/mman.h>
+#include <stdint.h>
 
 typedef struct block {
   size_t size;
@@ -34,3 +35,4 @@ static uintptr_t *getbos();
 alloc_t *alloc_init();
 void *mem_alloc(alloc_t *allocator, size_t num_units);
 void gc_collect(alloc_t *allocator);
+static int allow_log;
