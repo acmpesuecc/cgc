@@ -6,8 +6,7 @@
 #define PAGE_SIZE 4096
 #define ALLOC_SUCCESS 0
 #define ALLOC_FAILURE 1
-#ifndef ALLOC_LIMIT  // Prevent redefinition
-#define ALLOC_LIMIT (100 * PAGE_SIZE)  
+#define ALLOC_LIMIT (100 * PAGE_SIZE)  // Define ALLOC_LIMIT without condition
 
 typedef struct mem_block {  // Renamed to avoid conflicts
     size_t size;
@@ -218,3 +217,4 @@ void print_usedlist(mem_block_t *list) {
     }
     printf("\n");
 }
+
