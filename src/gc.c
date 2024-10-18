@@ -16,25 +16,27 @@ void alloc_init() {
     gc_state = GC_RUNNING;  // Set initial state to RUNNING
 }
 
+// Function to allow the user to set the GC option at any time
+void gc_set_option(GCState new_state) {
+    gc_state = new_state;
+    printf("Garbage Collector state set to: %s\n", 
+           (gc_state == GC_RUNNING) ? "RUNNING" : 
+           (gc_state == GC_PAUSED) ? "PAUSED" : "STOPPED");
+}
+
 // Function to start or resume garbage collection
 void gc_start() {
-    if (gc_state == GC_STOPPED) {
-        alloc_init();  // Reinitialize if previously stopped
-    }
-    gc_state = GC_RUNNING;  // Resume garbage collection
+    gc_set_option(GC_RUNNING);
 }
 
 // Function to stop garbage collection completely
 void gc_stop() {
-    gc_state = GC_STOPPED;
-    // Optionally free any resources or handle cleanup if necessary
+    gc_set_option(GC_STOPPED);
 }
 
 // Function to pause garbage collection temporarily
 void gc_pause() {
-    if (gc_state == GC_RUNNING) {
-        gc_state = GC_PAUSED;  // Pause the garbage collection
-    }
+    gc_set_option(GC_PAUSED);
 }
 
 // Scan memory to mark reachable blocks
