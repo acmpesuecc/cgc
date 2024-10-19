@@ -3,6 +3,7 @@
 static void *mempage_fetch(unsigned int num_pages) {
   void *block = mmap(NULL, num_pages * PAGE_SIZE, PROT_READ | PROT_WRITE,
                      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  mem_alloc(block,num_pages);
   if (block == MAP_FAILED) {
     return NULL;
   }
@@ -10,7 +11,7 @@ static void *mempage_fetch(unsigned int num_pages) {
   return block;
 }
 
-static void *mem_fetch(unsigned int num_bytes) {
+static void *mempage_fetch(unsigned int num_bytes) {
   void *mem = mmap(NULL, num_bytes, PROT_READ | PROT_WRITE,
                    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
   if (mem == MAP_FAILED) {
@@ -21,12 +22,17 @@ static void *mem_fetch(unsigned int num_bytes) {
 }
 
 alloc_t *alloc_init() {
-  alloc_t *allocator = (alloc_t *)malloc( sizeof(alloc_t) );
+  alloc_t *allocator = (alloc_t *)mempage_fetch( sizeof(alloc_t) );
+  void *bos = allocator->bos;
+  void *tos = __builtin_frame_address(0);
+
+  scan_mem(allocator, tos, bos);
+
   if (allocator == NULL) {
     return NULL;
   }
 
-  if ((allocator->free_list = mem_fetch(HEADER_SIZE)) == NULL) {
+  if ((allocator->free_list = mempage_fetch(HEADER_SIZE)) == NULL) {
     return NULL;
   }
   allocator->free_list->marked = 1;
@@ -34,7 +40,7 @@ alloc_t *alloc_init() {
   allocator->free_list->prev = allocator->free_list;
   allocator->free_list->size = 0;
 
-  if ((allocator->used_list = mem_fetch(HEADER_SIZE)) == NULL) {
+  if ((allocator->used_list = mempage_fetch(HEADER_SIZE)) == NULL) {
     return NULL;
   }
   allocator->used_list->marked = 1;
